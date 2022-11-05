@@ -97,7 +97,7 @@ class ServerUpdater:
 		example = False, #download example resources to the server
 		voice_server = False, #download voice server
 		config = False, #download basic config file
-		output_dir = "./" #output directory which the script will download the files to (default /dist)
+		output_dir = "./" #output directory which the script will download the files to (default is the current directory)
 	)
 
 	def __init__(self, command_line=True) -> None:
@@ -116,7 +116,7 @@ class ServerUpdater:
 		parser.add_argument("-e", "--example", action="store_true", help="download example resources to the server", required=False)
 		parser.add_argument("-vs", "--voice_server", action="store_true", help="download voice server", required=False)
 		parser.add_argument("-c", "--config", action="store_true", help="download basic config file", required=False)
-		parser.add_argument("--output_dir", type=str, default="./", help="output directory which the script will download the files to (default /dist)", required=False)
+		parser.add_argument("--output_dir", type=str, default="./", help="output directory which the script will download the files to (default is the current directory)", required=False)
 		
 		args = parser.parse_args()
 
