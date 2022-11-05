@@ -1,5 +1,5 @@
 # altv-py-updater
-A small script written in Python to download alt:V server files easily
+A small script written in Python to download alt:V server files easily. The script can be used as a standalone CLI or you can use the class itself and manage the update yourself in other scripts.
 
 # Requirements
 In order to make the script functional, you need to install some dependencies that is comes with the requirements.txt
