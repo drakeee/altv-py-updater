@@ -263,7 +263,6 @@ def main():
 
 	init(convert=True)
 	updater = ServerUpdater()
-	updater.settings
 
 	print("[======== alt:V Updater ========]")
 	print(f"Branch: {Fore.GREEN}{updater.settings.branch}{Style.RESET_ALL}")
