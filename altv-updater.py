@@ -5,12 +5,15 @@ import sys
 import requests
 import argparse
 from colorama import Fore, Style, init
+import json
+import hashlib
 
 args = None
 cdnUrls = {
 	"modules": {
 		"coreclr": {
 			"baseUrl": "https://cdn.altv.mp/coreclr-module/{BRANCH}/{PLATFORM}/{FILE}",
+			"update": True,
 			"files": [
 				#{"x64_win32": "update.json", "x64_linux": "update.json"},
 				{"x64_win32": "AltV.Net.Host.dll", "x64_linux": "AltV.Net.Host.dll"},
@@ -20,6 +23,7 @@ cdnUrls = {
 		},
 		"js": {
 			"baseUrl": "https://cdn.altv.mp/js-module/{BRANCH}/{PLATFORM}/{FILE}",
+			"update": True,
 			"files": [
 				#{"x64_win32": "update.json", "x64_linux": "update.json"},
 				{"x64_win32": "modules/js-module/js-module.dll", "x64_linux": "modules/js-module/libjs-module.so"},
@@ -28,6 +32,7 @@ cdnUrls = {
 		},
 		"jsbyte": {
 			"baseUrl": "https://cdn.altv.mp/js-bytecode-module/{BRANCH}/{PLATFORM}/{FILE}",
+			"update": True,
 			"files": [
 				#{"x64_win32": "update.json", "x64_linux": "update.json"},
 				{"x64_win32": "modules/js-bytecode-module.dll", "x64_linux": "modules/libjs-bytecode-module.so"}
@@ -36,6 +41,7 @@ cdnUrls = {
 	},
 	"voice_server": {
 		"baseUrl": "https://cdn.altv.mp/voice-server/{BRANCH}/{PLATFORM}/{FILE}",
+		"update": True,
 		"files": [
 			#{"x64_win32": "update.json", "x64_linux": "update.json"},
 			{"x64_win32": "altv-voice-server.exe", "x64_linux": "altv-voice-server"}
@@ -43,6 +49,7 @@ cdnUrls = {
 	},
 	"data": {
 		"baseUrl": "https://cdn.altv.mp/data/{BRANCH}/{FILE}",
+		"update": True,
 		"files": [
 			#{"x64_win32": "update.json", "x64_linux": "update.json"},
 			{"x64_win32": "data/vehmodels.bin", "x64_linux": "data/vehmodels.bin"},
@@ -53,6 +60,7 @@ cdnUrls = {
 	},
 	"server": {
 		"baseUrl": "https://cdn.altv.mp/server/{BRANCH}/{PLATFORM}/{FILE}",
+		"update": True,
 		"files": [
 			#{"x64_win32": "update.json", "x64_linux": "update.json"},
 			{"x64_win32": "altv-server.exe", "x64_linux": "altv-server"}
@@ -60,12 +68,14 @@ cdnUrls = {
 	},
 	"example": {
 		"baseUrl": "https://cdn.altv.mp/samples/{FILE}",
+		"update": False,
 		"files": [
 			{"x64_win32": "resources.zip", "x64_linux": "resources.zip"}
 		]
 	},
 	"config": {
 		"baseUrl": "https://cdn.altv.mp/others/{FILE}",
+		"update": False,
 		"files": [
 			{"x64_win32": "server.cfg", "x64_linux": "server.cfg"}
 		]
@@ -97,11 +107,14 @@ class ServerUpdater:
 		example = False, #download example resources to the server
 		voice_server = False, #download voice server
 		config = False, #download basic config file
-		output_dir = "./" #output directory which the script will download the files to (default is the current directory)
+		output_dir = "./", #output directory which the script will download the files to (default is the current directory)
+        silent = False #skip the prompt phase to input Yes or No to download files
 	)
 
 	def __init__(self, command_line=True) -> None:
 		self.command_line = command_line
+
+		#self.__download_integrity_json()
 
 		if command_line:
 			self.__parse_arguments()
@@ -117,12 +130,12 @@ class ServerUpdater:
 		parser.add_argument("-vs", "--voice_server", action="store_true", help="download voice server", required=False)
 		parser.add_argument("-c", "--config", action="store_true", help="download basic config file", required=False)
 		parser.add_argument("--output_dir", type=str, default="./", help="output directory which the script will download the files to (default is the current directory)", required=False)
+		parser.add_argument("--silent", action="store_true", help="skip the prompt phase to input Yes or No to download files", required=False)
 		
 		args = parser.parse_args()
 
 		for key, value in args.__dict__.items():
 			setattr(self.settings, key, value)
-
 
 	def __find_item(self, obj: dict, key: str):
 		if key in obj:
@@ -189,26 +202,45 @@ class ServerUpdater:
 					if callback:
 						callback(filename, downloaded, content_length)
 
+	def __integrity_check(self, filePath: str, hash: str):
+		if os.path.exists(filePath):
+			with open(filePath, 'rb') as file_to_check:
+				data = file_to_check.read()
+				sha1_returned = hashlib.sha1(data).hexdigest()
+
+			return (sha1_returned == hash)
+
+		return False
+
 	def get_files(self):
 		return_data = []
 
 		for option in self.__get_options():
+			url = option["baseUrl"] \
+					.replace("{BRANCH}", self.settings.branch) \
+					.replace("{PLATFORM}", self.settings.platform)
+
+			file_integrity = {}
+			if option["update"]:
+				jsonUrl = url.replace("{FILE}", "update.json")
+				response = requests.get(jsonUrl, stream=True)
+
+				if response.status_code == 200:
+					for file, hash in json.loads(response.content)["hashList"].items():
+						file_integrity[file] = self.__integrity_check(os.path.abspath(os.path.join(self.settings.output_dir, file)), hash)
+
 			for dfile in option["files"]:
 				filename = dfile[self.settings.platform]
-				url = option["baseUrl"] \
-					.replace("{BRANCH}", self.settings.branch) \
-					.replace("{PLATFORM}", self.settings.platform) \
-					.replace("{FILE}", filename)
-
-				return_data.append({"url": url, "filename": filename})
+				fileUrl = url.replace("{FILE}", filename)
+				return_data.append({"url": fileUrl, "filename": filename, "download": not file_integrity.get(filename) })
 
 		return_data.sort(key=lambda x: (-x["filename"].count('/'), x["filename"]))
 		return return_data
 
 	def update(self, callback):
-		
 		for d_file in self.get_files():
-			self.__download_file(d_file["url"], d_file["filename"], callback)
+			if d_file["download"]:
+				self.__download_file(d_file["url"], d_file["filename"], callback)
 
 class Utils:
 	__progress_bar_width = 50
@@ -271,11 +303,14 @@ def main():
 	print(f"The following files will be downloaded into {Fore.GREEN}{os.path.abspath(updater.settings.output_dir)}{Style.RESET_ALL}:")
 	
 	for x in updater.get_files():
-		print(f"{Fore.GREEN}{x['filename']}{Style.RESET_ALL}")
+		print(f"{(Fore.GREEN if x['download'] else Fore.RED)}{x['filename']} {'(hash matches)' if not x['download'] else ''}{Style.RESET_ALL}")
 
 	print()
 
-	answer = Utils.query_yes_no("Do you want to process and download the files listed above?")
+	answer = True
+	if not updater.settings.silent:
+		answer = Utils.query_yes_no("Do you want to process and download the files listed above?")
+		
 	if answer:
 		updater.update(update_callback)
 
