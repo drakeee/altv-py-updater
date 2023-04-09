@@ -55,7 +55,8 @@ cdnUrls = {
 			{"x64_win32": "data/vehmodels.bin", "x64_linux": "data/vehmodels.bin"},
 			{"x64_win32": "data/vehmods.bin", "x64_linux": "data/vehmods.bin"},
 			{"x64_win32": "data/clothes.bin", "x64_linux": "data/clothes.bin"},
-			{"x64_win32": "data/pedmodels.bin", "x64_linux": "data/pedmodels.bin"}
+			{"x64_win32": "data/pedmodels.bin", "x64_linux": "data/pedmodels.bin"},
+			{"x64_win32": "data/rpfdata.bin", "x64_linux": "data/rpfdata.bin"}
 		]
 	},
 	"server": {
