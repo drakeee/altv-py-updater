@@ -125,7 +125,7 @@ class ServerUpdater:
 		parser.add_argument("-p", "--platform", type=str, default="x64_win32", help="select which platform to download, windows or linux", choices=[self.Platform.Windows.value, self.Platform.Linux.value], required=False)
 		parser.add_argument("-b", "--branch", type=str, default="release", help="select which branch to use", choices=[self.Branch.Dev.value, self.Branch.RC.value, self.Branch.Release.value], required=False)
 		parser.add_argument("-m", "--modules", type=str, nargs="+", help="download modules for the server, possible values are: coreclr, js, jsbyte", choices=[self.Modules.Csharp.value, self.Modules.JavaScript.value, self.Modules.JSByte.value], required=False)
-		parser.add_argument("-ss", "--skip_server", action="store_false", help="skip download server binary file", required=False)
+		parser.add_argument("-ss", "--skip_server", action="store_false", help="skip download server binary file", required=False, dest="server")
 		parser.add_argument("-d", "--data", action="store_true", help="download server datas such as vehmods, vehbins, pedmodels, etc)", required=False)
 		parser.add_argument("-e", "--example", action="store_true", help="download example resources to the server", required=False)
 		parser.add_argument("-vs", "--voice_server", action="store_true", help="download voice server", required=False)
@@ -136,6 +136,7 @@ class ServerUpdater:
 		args = parser.parse_args()
 
 		for key, value in args.__dict__.items():
+			print(key, value)
 			setattr(self.settings, key, value)
 
 	def __find_item(self, obj: dict, key: str):
